@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Iluminação Pública</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        #map {
+            height: 400px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        
+        .form-container {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .reports-list {
+            margin-top: 20px;
+        }
+        
+        .report-item {
+            background: #f8f9fa;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .status-pendente {
+            border-left-color: #ffc107;
+        }
+        
+        .status-resolvido {
+            border-left-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏮 Sistema de Reporte de Iluminação Pública</h1>
+        
+        <div id="map"></div>
+        
+        <div class="form-container">
+            <h2>Reportar Problema</h2>
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="problema">Tipo de Problema:</label>
+                    <select id="problema" required>
+                        <option value="">Selecione o tipo de problema</option>
+                        <option value="lâmpada queimada">Lâmpada Queimada</option>
+                        <option value="poste danificado">Poste Danificado</option>
+                        <option value="luz piscando">Luz Piscando</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="descricao">Descrição (opcional):</label>
+                    <textarea id="descricao" rows="3" placeholder="Descreva o problema com mais detalhes..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="coordenadas">Coordenadas Atuais:</label>
+                    <input type="text" id="coordenadas" readonly>
+                </div>
+                
+                <button type="submit">📨 Reportar Problema</button>
+            </form>
+        </div>
+        
+        <div class="reports-list">
+            <h2>Problemas Reportados Recentemente</h2>
+            <div id="reportsContainer"></div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Variáveis globais
+        let map;
+        let userMarker;
+        let currentLat = -23.5505; // São Paulo como fallback
+        let currentLng = -46.6333;
+
+        // Inicializar mapa
+        function initMap() {
+            map = L.map('map').setView([currentLat, currentLng], 13);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Tentar obter localização do usuário
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        currentLat = position.coords.latitude;
+                        currentLng = position.coords.longitude;
+                        
+                        map.setView([currentLat, currentLng], 15);
+                        
+                        userMarker = L.marker([currentLat, currentLng])
+                            .addTo(map)
+                            .bindPopup('Sua localização atual')
+                            .openPopup();
+                            
+                        document.getElementById('coordenadas').value = 
+                            `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+                    },
+                    (error) => {
+                        console.error('Erro ao obter localização:', error);
+                        alert('Não foi possível obter sua localização. Use o mapa para selecionar manualmente.');
+                    }
+                );
+            }
+
+            // Permitir clicar no mapa para selecionar localização
+            map.on('click', function(e) {
+                currentLat = e.latlng.lat;
+                currentLng = e.latlng.lng;
+                
+                if (userMarker) {
+                    map.removeLayer(userMarker);
+                }
+                
+                userMarker = L.marker([currentLat, currentLng])
+                    .addTo(map)
+                    .bindPopup('Localização selecionada')
+                    .openPopup();
+                    
+                document.getElementById('coordenadas').value = 
+                    `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
+            });
+        }
+
+        // Carregar reports existentes
+        async function loadReports() {
+            try {
+                const response = await fetch('/api/reports');
+                const reports = await response.json();
+                
+                const container = document.getElementById('reportsContainer');
+                container.innerHTML = '';
+                
+                if (reports.length === 0) {
+                    container.innerHTML = '<p>Nenhum problema reportado ainda.</p>';
+                    return;
+                }
+                
+                reports.forEach(report => {
+                    const reportElement = document.createElement('div');
+                    reportElement.className = `report-item status-${report.status}`;
+                    reportElement.innerHTML = `
+                        <h3>${report.problema}</h3>
+                        <p><strong>Status:</strong> ${report.status}</p>
+                        <p><strong>Data:</strong> ${new Date(report.data_criacao).toLocaleString()}</p>
+                        <p><strong>Descrição:</strong> ${report.descricao || 'Nenhuma descrição'}</p>
+                    `;
+                    container.appendChild(reportElement);
+                    
+                    // Adicionar marcador no mapa
+                    L.marker([report.latitude, report.longitude])
+                        .addTo(map)
+                        .bindPopup(`
+                            <strong>${report.problema}</strong><br>
+                            Status: ${report.status}<br>
+                            ${report.descricao || ''}
+                        `);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar reports:', error);
+            }
+        }
+
+        // Enviar report
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const problema = document.getElementById('problema').value;
+            const descricao = document.getElementById('descricao').value;
+            
+            if (!problema) {
+                alert('Por favor, selecione o tipo de problema.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/reports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        latitude: currentLat,
+                        longitude: currentLng,
+                        problema: problema,
+                        descricao: descricao
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('Problema reportado com sucesso!');
+                    document.getElementById('reportForm').reset();
+                    loadReports(); // Recarregar a lista
+                } else {
+                    alert('Erro ao reportar problema: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro de conexão. Verifique se o servidor está rodando.');
+            }
+        });
+
+        // Inicializar aplicação quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadReports();
+            
+            // Atualizar lista a cada 30 segundos
+            setInterval(loadReports, 30000);
+        });
+    </script>
+</body>
+</html>
