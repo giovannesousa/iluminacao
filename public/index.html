@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,61 +12,63 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             padding: 20px;
             background-color: #f4f4f4;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             background: white;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         h1 {
             text-align: center;
             color: #333;
             margin-bottom: 20px;
         }
-        
+
         #map {
             height: 400px;
             margin-bottom: 20px;
             border-radius: 8px;
             border: 2px solid #ddd;
         }
-        
+
         .form-container {
             background: #f9f9f9;
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
         }
-        
+
         .form-group {
             margin-bottom: 15px;
         }
-        
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        
-        input, select, textarea {
+
+        input,
+        select,
+        textarea {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 16px;
         }
-        
+
         button {
             background: #007bff;
             color: white;
@@ -76,15 +79,15 @@
             font-size: 16px;
             width: 100%;
         }
-        
+
         button:hover {
             background: #0056b3;
         }
-        
+
         .reports-list {
             margin-top: 20px;
         }
-        
+
         .report-item {
             background: #f8f9fa;
             padding: 15px;
@@ -92,22 +95,23 @@
             border-radius: 5px;
             border-left: 4px solid #007bff;
         }
-        
+
         .status-pendente {
             border-left-color: #ffc107;
         }
-        
+
         .status-resolvido {
             border-left-color: #28a745;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>🏮 Sistema de Reporte de Iluminação Pública</h1>
-        
+
         <div id="map"></div>
-        
+
         <div class="form-container">
             <h2>Reportar Problema</h2>
             <form id="reportForm">
@@ -121,21 +125,21 @@
                         <option value="outro">Outro</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="descricao">Descrição (opcional):</label>
                     <textarea id="descricao" rows="3" placeholder="Descreva o problema com mais detalhes..."></textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="coordenadas">Coordenadas Atuais:</label>
                     <input type="text" id="coordenadas" readonly>
                 </div>
-                
+
                 <button type="submit">📨 Reportar Problema</button>
             </form>
         </div>
-        
+
         <div class="reports-list">
             <h2>Problemas Reportados Recentemente</h2>
             <div id="reportsContainer"></div>
@@ -147,13 +151,13 @@
         // Variáveis globais
         let map;
         let userMarker;
-        let currentLat = -23.5505; // São Paulo como fallback
-        let currentLng = -46.6333;
+        let currentLat = -6.95332; // São Paulo como fallback
+        let currentLng = -41.6396;
 
         // Inicializar mapa
         function initMap() {
             map = L.map('map').setView([currentLat, currentLng], 13);
-            
+
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '© OpenStreetMap contributors'
             }).addTo(map);
@@ -164,15 +168,15 @@
                     (position) => {
                         currentLat = position.coords.latitude;
                         currentLng = position.coords.longitude;
-                        
+
                         map.setView([currentLat, currentLng], 15);
-                        
+
                         userMarker = L.marker([currentLat, currentLng])
                             .addTo(map)
                             .bindPopup('Sua localização atual')
                             .openPopup();
-                            
-                        document.getElementById('coordenadas').value = 
+
+                        document.getElementById('coordenadas').value =
                             `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
                     },
                     (error) => {
@@ -183,20 +187,20 @@
             }
 
             // Permitir clicar no mapa para selecionar localização
-            map.on('click', function(e) {
+            map.on('click', function (e) {
                 currentLat = e.latlng.lat;
                 currentLng = e.latlng.lng;
-                
+
                 if (userMarker) {
                     map.removeLayer(userMarker);
                 }
-                
+
                 userMarker = L.marker([currentLat, currentLng])
                     .addTo(map)
                     .bindPopup('Localização selecionada')
                     .openPopup();
-                    
-                document.getElementById('coordenadas').value = 
+
+                document.getElementById('coordenadas').value =
                     `${currentLat.toFixed(6)}, ${currentLng.toFixed(6)}`;
             });
         }
@@ -206,15 +210,15 @@
             try {
                 const response = await fetch('/api/reports');
                 const reports = await response.json();
-                
+
                 const container = document.getElementById('reportsContainer');
                 container.innerHTML = '';
-                
+
                 if (reports.length === 0) {
                     container.innerHTML = '<p>Nenhum problema reportado ainda.</p>';
                     return;
                 }
-                
+
                 reports.forEach(report => {
                     const reportElement = document.createElement('div');
                     reportElement.className = `report-item status-${report.status}`;
@@ -225,7 +229,7 @@
                         <p><strong>Descrição:</strong> ${report.descricao || 'Nenhuma descrição'}</p>
                     `;
                     container.appendChild(reportElement);
-                    
+
                     // Adicionar marcador no mapa
                     L.marker([report.latitude, report.longitude])
                         .addTo(map)
@@ -243,15 +247,15 @@
         // Enviar report
         document.getElementById('reportForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const problema = document.getElementById('problema').value;
             const descricao = document.getElementById('descricao').value;
-            
+
             if (!problema) {
                 alert('Por favor, selecione o tipo de problema.');
                 return;
             }
-            
+
             try {
                 const response = await fetch('/api/reports', {
                     method: 'POST',
@@ -265,9 +269,9 @@
                         descricao: descricao
                     })
                 });
-                
+
                 const result = await response.json();
-                
+
                 if (response.ok) {
                     alert('Problema reportado com sucesso!');
                     document.getElementById('reportForm').reset();
@@ -285,10 +289,11 @@
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
             loadReports();
-            
+
             // Atualizar lista a cada 30 segundos
             setInterval(loadReports, 30000);
         });
     </script>
 </body>
+
 </html>
