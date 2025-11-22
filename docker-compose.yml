@@ -1,10 +1,23 @@
+version: '3.8'
+
 services:
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
     volumes:
       - ./iluminacao.db:/app/iluminacao.db
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+      # Configure essas variáveis em produção
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS:-admin123}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:-mudar_para_seguro}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --timeout=2 http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
