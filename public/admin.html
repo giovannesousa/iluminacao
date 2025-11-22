@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Iluminação Pública</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #3498db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .btn-logout {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background .3s;
+        }
+
+        .btn-logout:hover {
+            background: #c0392b;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .3);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-card h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #34495e;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color .3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform .2s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, .4);
+        }
+
+        .main-container {
+            display: none;
+            height: calc(100vh - 70px);
+            overflow: hidden;
+        }
+
+        .main-container.active {
+            display: flex;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #ecf0f1;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, .1);
+        }
+
+        .sidebar-section {
+            margin-bottom: 30px;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 1px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .filter-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: background .2s;
+            font-size: 14px;
+            color: #34495e;
+        }
+
+        .filter-label:hover {
+            background: #f8f9fa;
+        }
+
+        .btn-refresh {
+            width: 100%;
+            padding: 10px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background .3s;
+        }
+
+        .btn-refresh:hover {
+            background: #2980b9;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #ecf0f1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-header h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-left: 4px solid #3498db;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+
+        .content-body {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px 30px;
+            overflow: hidden;
+        }
+
+        .list-panel {
+            flex: 0 0 320px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+            overflow: hidden;
+        }
+
+        .list-header {
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            font-weight: 600;
+            color: #2c3e50;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .list-count {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .list-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .occurrence-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-left: 4px solid #f39c12;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .occurrence-item:hover {
+            background: #ecf0f1;
+            transform: translateX(5px);
+        }
+
+        .occurrence-item.active {
+            background: #d6eaf8;
+            border-left-color: #3498db;
+        }
+
+        .occurrence-item.resolved {
+            border-left-color: #27ae60;
+        }
+
+        .occurrence-item-title {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+
+        .occurrence-item-status {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-pendente {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+
+        .status-resolvido {
+            background: #a9dfbf;
+            color: #27ae60;
+        }
+
+        .map-panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .detail-panel {
+            flex: 0 0 280px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+            overflow: hidden;
+        }
+
+        .detail-header {
+            padding: 15px;
+            border-bottom: 1px solid #ecf0f1;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .detail-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            font-size: 14px;
+        }
+
+        .detail-item {
+            margin-bottom: 15px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #34495e;
+            margin-bottom: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .detail-value {
+            color: #7f8c8d;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            word-break: break-word;
+        }
+
+        .detail-actions {
+            padding: 15px;
+            border-top: 1px solid #ecf0f1;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-resolve {
+            flex: 1;
+            padding: 10px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background .3s;
+        }
+
+        .btn-resolve:hover:not(:disabled) {
+            background: #229954;
+        }
+
+        .btn-resolve:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #95a5a6;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            background: #fadbd8;
+            color: #c0392b;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 1400px) {
+            .detail-panel {
+                display: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .content-body {
+                flex-direction: column;
+            }
+
+            .list-panel {
+                flex: 0 0 auto;
+                max-height: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginContainer" class="login-container">
+        <div class="login-card">
+            <h1><i class="fas fa-lock"></i> Admin</h1>
+            <form id="loginForm">
+                <div class="error-message" id="errorMessage"></div>
+                <div class="form-group">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" placeholder="admin" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Entrar</button>
+            </form>
+        </div>
+    </div>
+    <div class="navbar" id="navbar" style="display: none;">
+        <div class="navbar-brand"><i class="fas fa-chart-line"></i> Painel Admin</div>
+        <div class="navbar-menu">
+            <div class="user-info">
+                <div class="user-avatar" id="userInitial">A</div>
+                <div>
+                    <div style="font-size: 14px; font-weight: 600;" id="userDisplay">admin</div>
+                    <div style="font-size: 12px; color: #bdc3c7;">Administrador</div>
+                </div>
+            </div>
+            <button class="btn-logout" id="btnLogout"><i class="fas fa-sign-out-alt"></i> Sair</button>
+        </div>
+    </div>
+    <div class="main-container" id="mainContainer">
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-title"><i class="fas fa-filter"></i> Filtrar</div>
+                <div class="filter-group">
+                    <label class="filter-label"><input type="radio" name="statusFilter" value=""
+                            checked><span>Todas</span></label>
+                    <label class="filter-label"><input type="radio" name="statusFilter" value="pendente"><span><i
+                                class="fas fa-hourglass-start"></i> Pendentes</span></label>
+                    <label class="filter-label"><input type="radio" name="statusFilter" value="resolvido"><span><i
+                                class="fas fa-check-circle"></i> Resolvidos</span></label>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <button class="btn-refresh" id="btnRefresh"><i class="fas fa-sync-alt"></i> Atualizar</button>
+            </div>
+        </div>
+        <div class="content">
+            <div class="content-header">
+                <h2><i class="fas fa-exclamation-circle"></i> Ocorrências</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #f39c12;">
+                        <div class="stat-value" id="pendingCount">0</div>
+                        <div class="stat-label">Pendentes</div>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #27ae60;">
+                        <div class="stat-value" id="resolvedCount">0</div>
+                        <div class="stat-label">Resolvidas</div>
+                    </div>
+                </div>
+            </div>
+            <div class="content-body">
+                <div class="list-panel">
+                    <div class="list-header"><span><i class="fas fa-list"></i> Lista</span><span class="list-count"
+                            id="listCount">0</span></div>
+                    <div class="list-items" id="occurrencesList">
+                        <div class="empty-state"><i class="fas fa-inbox"></i>
+                            <div>Nenhuma ocorrência</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="map-panel">
+                    <div id="map"></div>
+                </div>
+                <div class="detail-panel">
+                    <div class="detail-header"><i class="fas fa-info-circle"></i> Detalhes</div>
+                    <div class="detail-content" id="detailContent">
+                        <div class="empty-state"><i class="fas fa-mouse-pointer"></i>
+                            <div>Selecione uma ocorrência</div>
+                        </div>
+                    </div>
+                    <div class="detail-actions" id="detailActions" style="display: none;">
+                        <button class="btn-resolve" id="btnResolve"><i class="fas fa-check"></i> Marcar
+                            Resolvido</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="/admin.js"></script>
+</body>
+
+</html>
